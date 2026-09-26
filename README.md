@@ -4,6 +4,12 @@
 
 项目不依赖公网订阅转换服务，内置 SubConverter-Extended v1.1.26，节点转换全部在本机完成。
 
+## 下载成品
+
+直接下载 Windows 单文件 EXE：[openclashgen.exe](https://github.com/santian666/openclashgen/releases/download/v0.0.1/openclashgen.exe)
+
+也可以进入 [Releases](https://github.com/santian666/openclashgen/releases) 页面查看版本和发布说明。
+
 ## 主要功能
 
 - 本地节点转换：调用内置 SubConverter-Extended，服务地址为 `127.0.0.1:25500`。
