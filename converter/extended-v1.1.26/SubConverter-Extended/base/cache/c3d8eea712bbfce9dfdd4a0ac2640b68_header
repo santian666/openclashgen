@@ -1,0 +1,26 @@
+HTTP/1.1 200 Connection established
+
+HTTP/2 200 
+date: Thu, 23 Jul 2026 04:24:20 GMT
+content-type: text/plain; charset=utf-8
+access-control-allow-origin: *
+access-control-expose-headers: *
+timing-allow-origin: *
+cache-control: public, max-age=604800, s-maxage=43200
+cross-origin-resource-policy: cross-origin
+x-content-type-options: nosniff
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+x-jsd-version: refs
+x-jsd-version-type: branch
+etag: W/"30e6-dZEn91MgOFUnv0btCGJDnv9uYQM"
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=KSNOzt2FD4gx3VQik1H5Cqe7CLZboziLRNi4tn79ySlT1kKsLeUttrpl1AxRcbKP009YRCnL7f6KmgRVzaMlmbyRXTmS%2BKpA0c45AtHI1Kr5nKbKxL5NlejcpVaPy%2FsDqpGOghV9NRY%3D"}]}
+x-served-by: cache-fra-eddf8230165-FRA, cache-sjc1000107-SJC
+x-cache: MISS, MISS
+vary: Accept-Encoding
+alt-svc: h3=":443"; ma=86400
+nel: {"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}
+age: 37263
+cf-cache-status: HIT
+server: cloudflare
+cf-ray: a1f7ea35283758fe-LAX
+

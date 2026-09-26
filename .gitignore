@@ -1,0 +1,4 @@
+converter/subconverter/
+
+# 本地运行产生的日志
+*.log

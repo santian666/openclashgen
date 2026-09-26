@@ -1,0 +1,28 @@
+HTTP/1.1 200 Connection established
+
+HTTP/2 200 
+date: Thu, 23 Jul 2026 03:02:07 GMT
+content-type: text/yaml; charset=utf-8
+content-length: 648
+access-control-allow-origin: *
+access-control-expose-headers: *
+timing-allow-origin: *
+cache-control: public, max-age=604800, s-maxage=43200
+cross-origin-resource-policy: cross-origin
+x-content-type-options: nosniff
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+x-jsd-version: main
+x-jsd-version-type: branch
+etag: W/"288-2MBwBHGzNuXqXTSpCZuGMmfOWTU"
+accept-ranges: bytes
+x-served-by: cache-fra-eddf8230136-FRA, cache-lga21992-LGA
+x-cache: HIT, MISS
+vary: Accept-Encoding
+alt-svc: h3=":443"; ma=86400
+nel: {"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}
+age: 34099
+cf-cache-status: HIT
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=swjRlb2xTXWmtV6Ii%2FyuzOSe%2FNtsqQ0cenhma6TI%2F7PFgCY1%2BQBG7Abc9Uot%2FC5H2JDMnk2IvU7oUMEFg2tbc4oBL7Pt6F0348VEFjimx%2FyCAq5tt2zffxCbxU8vtcrMnz%2FhjoCbTAA%3D"}]}
+server: cloudflare
+cf-ray: a1f771ca2bc77b74-IAD
+

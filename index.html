@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OpenClash 配置生成器</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#1f2937;font:13px/1.5 "Microsoft YaHei",sans-serif}.top{height:48px;padding:0 20px;background:#fff;border-bottom:1px solid #dbe2ea;display:flex;align-items:center;justify-content:space-between}.top strong{font-size:15px}.status{color:#64748b}.wrap{display:grid;grid-template-columns:390px minmax(0,1fr);align-items:start;gap:14px;padding:14px;max-width:1440px;margin:auto}.panel{background:#fff;border:1px solid #dbe2ea;border-radius:6px;box-shadow:0 1px 3px #0f172a12;padding:14px;min-width:0}.result-panel{display:flex;flex-direction:column}h2{font-size:14px;margin:0 0 12px;color:#0f172a}label{display:block;margin:0 0 11px;font-weight:600}input,textarea{width:100%;margin-top:5px;padding:8px 9px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;color:#111827;font:inherit}input[readonly]{background:#f1f5f9}textarea{min-height:118px;resize:vertical;font-family:Consolas,monospace}#frontNode{min-height:58px}.hint{display:block;margin-top:4px;color:#64748b;font-weight:400}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cidr-input{display:flex;align-items:center;gap:6px;margin-top:5px}.cidr-input input{min-width:0;margin:0}.cidr-suffix{font-weight:500;color:#475569}.modes{display:flex;gap:18px;margin:0 0 10px}.modes label{display:flex;align-items:center;gap:6px;margin:0;font-weight:400}.modes input{width:auto;margin:0}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.node-action{margin:-3px 0 13px}.btn{border:1px solid #cbd5e1;border-radius:4px;background:#fff;padding:8px 13px;cursor:pointer}.btn.primary{background:#1677ff;border-color:#1677ff;color:#fff}.btn:disabled{opacity:.6;cursor:not-allowed}.message{min-height:20px;margin-top:8px;color:#dc2626}.head{display:flex;align-items:center;justify-content:space-between;gap:10px}.badge{background:#eaf2ff;color:#175cd3;padding:3px 8px;border-radius:12px}.node-names,.output{width:100%;height:360px;overflow:auto;background:#f8fafc;border:1px solid #dbe2ea;border-radius:4px;padding:12px;white-space:pre;font:12px/1.55 Consolas,monospace}.node-names{margin:8px 0 12px}.output{margin:0}.output.full{height:360px;min-height:0;flex:none}.empty{color:#64748b}@media(max-width:850px){.wrap{grid-template-columns:1fr}.two{grid-template-columns:1fr}.node-names,.output{height:280px}.output.full{height:572px}}
+  </style>
+</head>
+<body>
+  <header class="top"><strong>OpenClash 配置生成器</strong><span class="status">本地 SubConverter-Extended v1.1.26</span></header>
+  <main class="wrap">
+    <section id="settingsPanel" class="panel">
+      <h2>节点与配置设置</h2>
+      <label>gfwairport 编号
+        <input id="airportNumber" type="number" min="1" value="1">
+      </label>
+      <div class="modes" role="radiogroup" aria-label="节点连接模式">
+        <label><input type="radio" name="connectMode" value="direct" checked>直连模式</label>
+        <label><input type="radio" name="connectMode" value="chain">链式模式</label>
+      </div>
+      <div id="frontNodeWrap">
+        <label>前置节点
+          <textarea id="frontNode" placeholder="输入一个前置节点协议，例如：&#10;ss://...&#10;vmess://..."></textarea>
+          <span class="hint">链式模式下，普通节点会自动使用该节点名称作为 dialer-proxy。</span>
+        </label>
+      </div>
+      <label>输入节点协议
+        <textarea id="nodes" placeholder="示例：&#10;154.197.127.251:9729:账号:密码&#10;ss://...&#10;vmess://..."></textarea>
+        <span class="hint">SK5：IP:端口:账号:密码；其他协议粘贴正常分享链接，每行一个。</span>
+      </label>
+      <div class="node-action">
+        <button id="generateNodes" class="btn primary">生成节点代码</button>
+      </div>
+      <label>策略数量
+        <input id="strategyCount" type="number" min="1" max="254" value="20">
+      </label>
+      <h2>设备 IP 规则</h2>
+      <label>规则数量（跟随策略）
+        <input id="ruleCount" value="20" readonly>
+      </label>
+      <div class="two">
+        <label>起始网段<span class="cidr-input"><input id="ipStart" value="10.0.1.0"><span class="cidr-suffix">/24</span></span></label>
+        <label>结束网段<span class="cidr-input"><input id="ipEnd" value="10.0.20.0" readonly><span class="cidr-suffix">/24</span></span></label>
+      </div>
+      <div class="actions">
+        <button id="generate" class="btn primary">转换并生成完整配置</button>
+        <button id="copy" class="btn">复制配置</button>
+        <button id="exportYaml" class="btn">导出 YAML</button>
+      </div>
+      <div id="message" class="message"></div>
+    </section>
+    <section id="resultPanel" class="panel result-panel">
+      <div class="head"><h2 id="resultTitle">节点代码 / 完整配置</h2><span id="count" class="badge">暂无节点</span></div>
+      <pre id="nodeNames" class="node-names empty">暂无数据</pre>
+      <pre id="output" class="output">点击“生成节点代码”查看 proxies 节点段。</pre>
+    </section>
+  </main>
+  <script>
+    const $=id=>document.getElementById(id);
+    const fixedRules=`  - RULE-SET,BanAD,🛑 广告拦截
+  - RULE-SET,BanProgramAD,🛑 广告拦截
+  - RULE-SET,OpenAi,💬 OpenAi
+  - RULE-SET,YouTube,📹 油管视频
+  - RULE-SET,Apple,🚀 节点选择
+  - RULE-SET,ProxyGFWlist,🚀 节点选择
+  - GEOSITE,cn,DIRECT
+  - GEOIP,CN,DIRECT,no-resolve
+  - MATCH,🐟 漏网之鱼`;
+    const fixedGroups=`  - name: 🚀 节点选择
+    type: select
+    use: *proxy-providers-use
+    <<: *pr
+
+  - name: ♻️ 自动选择
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    use: *proxy-providers-use
+    <<: *pr
+
+  - name: 📹 油管视频
+    type: select
+    use: *proxy-providers-use
+    <<: *pr
+
+  - name: 💬 OpenAi
+    type: select
+    use: *proxy-providers-use
+    <<: *pr
+
+  - name: 🎯 全球直连
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+
+  - name: 🛑 广告拦截
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+
+  - name: 🐟 漏网之鱼
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - ♻️ 自动选择
+      - DIRECT`;
+    const fixedEnd=`rule-providers:
+  BanAD:
+    type: http
+    behavior: classical
+    url: https://api.dler.io/getruleset?type=6&url=aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0FDTDRTU1IvQUNMNFNTUi9tYXN0ZXIvQ2xhc2gvQmFuQUQubGlzdA
+    path: ./providers/BanAD.yaml
+    interval: 86400
+  BanProgramAD:
+    type: http
+    behavior: classical
+    url: https://api.dler.io/getruleset?type=6&url=aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0FDTDRTU1IvQUNMNFNTUi9tYXN0ZXIvQ2xhc2gvQmFuUHJvZ3JhbUFELmxpc3Q
+    path: ./providers/BanProgramAD.yaml
+    interval: 86400
+  ProxyGFWlist:
+    type: http
+    behavior: classical
+    url: https://api.dler.io/getruleset?type=6&url=aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0FDTDRTU1IvQUNMNFNTUi9tYXN0ZXIvQ2xhc2gvUHJveHlHRldsaXN0Lmxpc3Q
+    path: ./providers/ProxyGFWlist.yaml
+    interval: 86400
+  YouTube:
+    type: http
+    behavior: classical
+    url: https://api.dler.io/getruleset?type=6&url=aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0FDTDRTU1IvQUNMNFNTUi9tYXN0ZXIvQ2xhc2gvUnVsZXNldC9Zb3VUdWJlLmxpc3Q
+    path: ./providers/YouTube.yaml
+    interval: 86400
+  OpenAi:
+    type: http
+    behavior: classical
+    url: https://api.dler.io/getruleset?type=6&url=aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0FDTDRTU1IvQUNMNFNTUi9tYXN0ZXIvQ2xhc2gvUnVsZXNldC9PcGVuQWkubGlzdA
+    path: ./providers/OpenAi.yaml
+    interval: 86400
+  Apple:
+    type: http
+    behavior: classical
+    url: https://api.dler.io/getruleset?type=6&url=aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0FDTDRTU1IvQUNMNFNTUi9tYXN0ZXIvQ2xhc2gvQXBwbGUubGlzdA
+    path: ./providers/Apple.yaml
+    interval: 86400
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - localhost
+    - "*.home.arpa"
+  proxy-server-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver-policy:
+    "geosite:cn":
+      - 223.5.5.5
+      - 119.29.29.29
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  fallback:
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+    - 1.1.1.1
+    - 8.8.8.8
+  fallback-filter:
+    geoip: true
+    geoip-code: CN`;
+    function makeRules(){const m=$('ipStart').value.trim().match(/^(\d+\.\d+)\.(\d+)\.0$/),n=Number($('strategyCount').value);if(!m||!Number.isInteger(n)||n<1||n>254||Number(m[2])+n-1>254)return null;return Array.from({length:n},(_,i)=>`${m[1]}.${Number(m[2])+i}.0/24`)}
+    function sync(){const r=makeRules();$('ruleCount').value=$('strategyCount').value;$('ipEnd').value=r?r[r.length-1].replace(/\/24$/,''):''}
+    function syncResultHeights(){if(window.innerWidth<=850){$('nodeNames').style.height='280px';$('output').style.height=$('output').classList.contains('full')?'572px':'280px';return}const settingsBottom=$('settingsPanel').getBoundingClientRect().bottom;const paddingBottom=parseFloat(getComputedStyle($('resultPanel')).paddingBottom)||0;if($('output').classList.contains('full')){const outputTop=$('output').getBoundingClientRect().top;$('output').style.height=`${Math.max(240,Math.floor(settingsBottom-outputTop-paddingBottom))}px`;return}const namesTop=$('nodeNames').getBoundingClientRect().top;const gap=12;const available=settingsBottom-namesTop-paddingBottom-gap;const height=Math.max(160,Math.floor(available/2));$('nodeNames').style.height=`${height}px`;$('output').style.height=`${height}px`}
+    function showNodeResultView(){$('nodeNames').hidden=false;$('output').classList.remove('full');$('resultTitle').textContent='节点代码';requestAnimationFrame(syncResultHeights)}
+    function showFullResultView(){$('nodeNames').hidden=true;$('output').classList.add('full');$('resultTitle').textContent='完整配置';requestAnimationFrame(syncResultHeights)}
+    function clearResult(){ showNodeResultView();$('output').textContent='';$('count').textContent='暂无节点';$('nodeNames').textContent='暂无数据';$('nodeNames').classList.add('empty');$('message').textContent='' }
+    function clearResultWhenEmpty(){if(!$('nodes').value.trim()||(isChainMode()&&!$('frontNode').value.trim()))clearResult()}
+    function namesFromProxies(text){const names=[];for(const line of text.split('\n')){let m=line.match(/(?:^|[,{]\s*)name:\s*(?:"([^"]+)"|'([^']+)'|([^,}\n]+))/);if(m)names.push((m[1]||m[2]||m[3]).trim())}return [...new Set(names)]}
+    function isChainMode(){return document.querySelector('input[name="connectMode"]:checked').value==='chain'}
+    function syncMode(){$('frontNodeWrap').hidden=!isChainMode()}
+    function yamlNodeName(name){return /[,\[\]{}:#&*!|>'"%@`]/.test(name)||/^[-?]\s/.test(name)?JSON.stringify(name):name}
+    function addDialer(text,dialerName){const name=yamlNodeName(dialerName);return text.split('\n').map(line=>line.trimStart().startsWith('- {')&&line.trimEnd().endsWith('}')?line.replace(/}\s*$/,`, dialer-proxy: ${name}}`):line).join('\n')}
+    function mergeProxies(front,regular){const lines=text=>text.split('\n').filter(line=>line.trim()!=='proxies:'&&line.trim()!=='');return `proxies:\n${[...lines(front),...lines(regular)].join('\n')}`}
+    function showNames(names,suffix=''){ $('count').textContent=names.length?`${names.length} 个节点${suffix}`:'暂无节点';$('nodeNames').classList.toggle('empty',!names.length);$('nodeNames').textContent=names.length?`pr: &pr\n  proxies:  #这里添加节点名称  名称！名称！注意是添加节点名称！不是节点信息，节点信息填在下面那行\n${names.map(name=>`  - ${name}`).join('\n')}`:'暂无数据' }
+    async function convertInput(nodes){const res=await fetch('/api/convert',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nodes})});const data=await res.json();if(!res.ok)throw new Error(data.error||'转换失败');return{proxies:data.proxies,names:namesFromProxies(data.proxies)}}
+    async function runButton(button,busyText,normalText,task){$('message').textContent='';button.disabled=true;button.textContent=busyText;try{return await task()}finally{button.disabled=false;button.textContent=normalText}}
+    function addProxyComment(text){return text.replace(/^proxies:\s*$/m,'proxies:   #这里添加节点')}
+    async function convertNodes(button,busyText,normalText){return runButton(button,busyText,normalText,async()=>{if(isChainMode()&&!$('frontNode').value.trim())throw new Error('链式模式请先输入前置节点。');const regular=await convertInput($('nodes').value);if(!isChainMode())return{proxies:addProxyComment(regular.proxies),names:regular.names};const front=await convertInput($('frontNode').value);if(front.names.length!==1)throw new Error('前置节点只能输入一个，并且必须能获取节点名称。');const regularWithDialer=addDialer(regular.proxies,front.names[0]);const proxies=addProxyComment(mergeProxies(front.proxies,regularWithDialer));return{proxies,names:namesFromProxies(proxies)}})}
+    function buildConfig(proxies,names,rules){const provider=`gfwairport${Number($('airportNumber').value)}`;const proxyNames=names.map(n=>`  - ${n}`).join('\n');const ruleText=rules.map((r,i)=>`  - SRC-IP-CIDR,${r},策略${i+1}${i===0?'     #(这里填写设备ip和链式代理组名称）':''}`).join('\n');const groups=rules.map((_,i)=>`  - name: 策略${i+1}\n    type: select\n    use: *proxy-providers-use\n    <<: *pr`).join('\n\n');return `proxy-providers:\n  ${provider}:\n    type: http\n    url: ""            #这里添加机场链接\n    proxy:\n    interval: 3600\n    health-check:\n      enable: true\n      url: https://www.gstatic.com/generate_204\n      interval: 900\n\nproxy-providers-config:\n  proxy-providers-use: &proxy-providers-use\n    - ${provider}\nport: 7890\nsocks-port: 7891\nallow-lan: true\nmode: rule\n\npr: &pr\n  proxies:  #这里添加节点名称  名称！名称！注意是添加节点名称！不是节点信息，节点信息填在下面那行\n${proxyNames}\n\n${proxies}\n\nrules:\n${ruleText}\n${fixedRules}\n\nproxy-groups:\n${groups}\n\n${fixedGroups}\n\n${fixedEnd}`}
+    async function generateNodeCode(){try{const result=await convertNodes($('generateNodes'),'正在生成…','生成节点代码');showNodeResultView();$('output').textContent=result.proxies;showNames(result.names);$('message').style.color='#15803d';$('message').textContent=isChainMode()?`已生成链式节点代码，前置节点：${result.names[0]}`:'已生成直连节点代码。'}catch(e){$('message').style.color='';$('message').textContent=e.message}}
+    async function generate(){const rules=makeRules();$('message').style.color='';$('message').textContent='';if(!rules){$('message').textContent='请检查策略数量和起始网段。';return}if(!Number.isInteger(Number($('airportNumber').value))||Number($('airportNumber').value)<1){$('message').textContent='gfwairport 编号必须是大于 0 的整数。';return}try{const result=await convertNodes($('generate'),'正在转换…','转换并生成完整配置');showFullResultView();$('output').textContent=buildConfig(result.proxies,result.names,rules);showNames(result.names,` · ${rules.length} 条规则`);$('message').style.color='#15803d';$('message').textContent='完整配置已生成。'}catch(e){$('message').style.color='';$('message').textContent=e.message}}
+    function exportYaml(){if(!$('output').classList.contains('full')||!$('output').textContent.trim()){$('message').style.color='';$('message').textContent='请先生成完整配置。';return}const blob=new Blob(['\ufeff'+$('output').textContent],{type:'application/x-yaml;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='openclash-config.yaml';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);$('message').style.color='#15803d';$('message').textContent='YAML 配置已导出。'}
+    function sendHeartbeat(){fetch('/api/heartbeat',{method:'POST',keepalive:true}).catch(()=>{})}
+    $('strategyCount').addEventListener('input',sync);$('ipStart').addEventListener('input',sync);$('nodes').addEventListener('input',clearResultWhenEmpty);$('frontNode').addEventListener('input',clearResultWhenEmpty);document.querySelectorAll('input[name="connectMode"]').forEach(input=>input.addEventListener('change',()=>{syncMode();clearResultWhenEmpty()}));$('generateNodes').addEventListener('click',generateNodeCode);$('generate').addEventListener('click',generate);$('copy').addEventListener('click',async()=>{await navigator.clipboard.writeText($('output').textContent);$('message').style.color='#15803d';$('message').textContent='配置已复制。'});$('exportYaml').addEventListener('click',exportYaml);window.addEventListener('resize',syncResultHeights);window.addEventListener('pagehide',()=>navigator.sendBeacon('/api/close'));setInterval(sendHeartbeat,1000);sendHeartbeat();sync();syncMode();requestAnimationFrame(syncResultHeights);
+  </script>
+</body>
+</html>
